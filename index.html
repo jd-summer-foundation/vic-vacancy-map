@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Victoria disability-housing vacancies</title>
+<link rel="stylesheet" href="vendor/leaflet.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+:root{
+  color-scheme: light;
+  --page:        #f9f9f7;
+  --surface:     #fcfcfb;
+  --ink:         #0b0b0b;
+  --ink-2:       #52514e;
+  --ink-3:       #898781;
+  --grid:        #e1e0d9;
+  --border:      rgba(11,11,11,0.10);
+  --accent:      #2a78d6;
+  --accent-ink:  #ffffff;
+  --p1: #2a78d6; --p2: #eb6834; --p3: #1baf7a; --p4: #eda100;
+  --mixed: #6b6a64;
+  --seq-100:#cde2fb; --seq-300:#6da7ec; --seq-500:#256abf; --seq-700:#0d366b;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --page:#0d0d0d; --surface:#1a1a19; --ink:#ffffff; --ink-2:#c3c2b7; --ink-3:#898781;
+    --grid:#2c2c2a; --border:rgba(255,255,255,0.10);
+    --accent:#3987e5; --accent-ink:#ffffff;
+    --p1:#3987e5; --p2:#d95926; --p3:#199e70; --p4:#c98500; --mixed:#a3a196;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --page:#0d0d0d; --surface:#1a1a19; --ink:#ffffff; --ink-2:#c3c2b7; --ink-3:#898781;
+  --grid:#2c2c2a; --border:rgba(255,255,255,0.10);
+  --accent:#3987e5; --accent-ink:#ffffff;
+  --p1:#3987e5; --p2:#d95926; --p3:#199e70; --p4:#c98500; --mixed:#a3a196;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;}
+body{background:var(--page);color:var(--ink);font-family:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;}
+.wrap{max-width:1180px;margin:0 auto;padding:28px 20px 56px;}
+header{display:flex;flex-direction:column;gap:6px;margin-bottom:20px;}
+h1{font-size:26px;font-weight:700;letter-spacing:-0.01em;margin:0;text-wrap:balance;}
+.sub{color:var(--ink-2);font-size:14.5px;line-height:1.5;max-width:66ch;margin:0;}
+.byline{color:var(--ink-3);font-size:12.5px;margin:2px 0 0;}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:18px 0 20px;}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:2px;}
+.stat .n{font-family:"IBM Plex Mono",monospace;font-weight:600;font-size:22px;font-variant-numeric:tabular-nums;letter-spacing:-0.01em;}
+.stat .l{font-size:11.5px;color:var(--ink-2);text-transform:uppercase;letter-spacing:0.04em;}
+.panel{display:grid;grid-template-columns:1fr 240px;gap:14px;align-items:start;}
+@media (max-width:820px){ .panel{grid-template-columns:1fr;} }
+.mapcard{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;position:relative;}
+.maptools{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;flex-wrap:wrap;}
+.seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+.seg button{font:inherit;font-family:"Public Sans",sans-serif;font-size:13px;font-weight:600;padding:7px 13px;border:0;background:var(--surface);color:var(--ink-2);cursor:pointer;}
+.seg button.active{background:var(--accent);color:var(--accent-ink);}
+.seg button:not(.active):hover{background:var(--page);}
+.viewlink{font:inherit;font-family:"Public Sans",sans-serif;font-size:13px;font-weight:600;padding:0 12px;height:28px;border-radius:7px;border:1px solid var(--border);background:var(--surface);color:var(--ink-2);cursor:pointer;}
+.viewlink:hover{background:var(--page);color:var(--ink);}
+.canvaswrap{position:relative;width:100%;aspect-ratio:1.42/1;max-height:620px;border-radius:8px;overflow:hidden;background:var(--page);}
+#map{width:100%;height:100%;}
+.legend{position:absolute;left:12px;bottom:12px;z-index:1000;background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:9px 12px;font-size:11.5px;color:var(--ink-2);display:flex;flex-direction:column;gap:6px;min-width:190px;box-shadow:0 2px 10px rgba(0,0,0,.08);}
+.legend .bar{height:9px;border-radius:5px;background:linear-gradient(90deg,var(--seq-100),var(--seq-300),var(--seq-500),var(--seq-700));position:relative;}
+.legend .ticks{display:flex;justify-content:space-between;font-family:"IBM Plex Mono",monospace;font-size:10px;color:var(--ink-3);font-variant-numeric:tabular-nums;}
+.legend .cap{font-size:10.5px;color:var(--ink-3);}
+.side{display:flex;flex-direction:column;gap:14px;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;}
+.card h2{font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:var(--ink-3);margin:0 0 10px;font-weight:600;}
+.chiprow{display:flex;flex-direction:column;gap:6px;}
+.chip{display:flex;align-items:center;gap:9px;cursor:pointer;user-select:none;padding:6px 8px;border-radius:7px;border:1px solid transparent;}
+.chip:hover{background:var(--page);}
+.chip input{position:absolute;opacity:0;width:0;height:0;}
+.swatch{width:11px;height:11px;border-radius:3px;flex:0 0 auto;box-shadow:0 0 0 1px var(--border) inset;}
+.chip .lbl{font-size:13px;flex:1;}
+.chip .cnt{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--ink-3);font-variant-numeric:tabular-nums;}
+.chip.off .lbl,.chip.off .cnt{color:var(--ink-3);opacity:.55;}
+.chip.off .swatch{opacity:.35;}
+.bedrow{display:flex;flex-wrap:wrap;gap:6px;}
+.bedbtn{font:inherit;font-family:"IBM Plex Mono",monospace;font-size:12.5px;font-weight:600;padding:5px 10px;border-radius:7px;border:1px solid var(--border);background:var(--surface);color:var(--ink-2);cursor:pointer;}
+.bedbtn.active{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);}
+.bedbtn:not(.active):hover{background:var(--page);}
+.resetlink{font:inherit;font-size:12.5px;color:var(--ink-3);background:none;border:0;text-decoration:underline;text-underline-offset:2px;cursor:pointer;padding:0;}
+.tablewrap{display:none;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:6px;overflow-x:auto;}
+.tablewrap.show{display:block;}
+.panel.hidden{display:none;}
+table{border-collapse:collapse;width:100%;font-size:13px;}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--grid);}
+th{color:var(--ink-3);font-size:11px;text-transform:uppercase;letter-spacing:.04em;font-weight:600;cursor:pointer;white-space:nowrap;}
+th:hover{color:var(--ink);}
+td.num{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;}
+td a{color:var(--accent);}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;vertical-align:middle;}
+.note{color:var(--ink-3);font-size:12px;margin-top:12px;line-height:1.5;}
+.note a{color:var(--ink-2);}
+.leaflet-popup-content{font-family:"Public Sans",sans-serif;font-size:13px;line-height:1.5;}
+.leaflet-popup-content b{display:block;margin-bottom:3px;}
+.leaflet-popup-content .pl{color:#555;font-size:12px;}
+.leaflet-tooltip{font-family:"Public Sans",sans-serif;font-size:12.5px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Victoria disability-housing vacancies</h1>
+    <p class="sub">Every current SDA/SIL vacancy listed by Life Without Barriers, Scope, Aruma and possAbility across Victoria, plotted on a real street map. Toggle between a density heatmap and individual listings, and filter by provider or bedroom count.</p>
+    <p class="byline">Vacancy data scraped from each provider's own site &middot; 19 of 211 locations use an approximate suburb centroid where a provider does not publish coordinates &middot; map data &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors</p>
+  </header>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="panel" id="mapPanel">
+    <div class="mapcard">
+      <div class="maptools">
+        <div class="seg" id="viewSeg">
+          <button data-view="heat" class="active">Heatmap</button>
+          <button data-view="pins">Pins</button>
+        </div>
+        <button class="viewlink" id="toTable">View as table</button>
+      </div>
+      <div class="canvaswrap" id="canvasWrap">
+        <div id="map"></div>
+        <div class="legend" id="legend"></div>
+      </div>
+    </div>
+
+    <div class="side">
+      <div class="card">
+        <h2>Provider</h2>
+        <div class="chiprow" id="providerChips"></div>
+      </div>
+      <div class="card">
+        <h2>Bedrooms</h2>
+        <div class="bedrow" id="bedRow"></div>
+      </div>
+      <button class="resetlink" id="resetFilters">Reset filters</button>
+    </div>
+  </div>
+
+  <div class="panel hidden" id="tablePanelWrap">
+    <div class="tablewrap show" id="tableWrap" style="grid-column:1/-1;">
+      <table id="dataTable">
+        <thead><tr>
+          <th data-k="provider">Provider</th><th data-k="title">Listing</th>
+          <th data-k="suburb">Suburb</th><th data-k="bedrooms">Beds</th>
+          <th data-k="bathrooms">Baths</th><th data-k="buildingType">Type</th>
+        </tr></thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <p class="note">Basemap tiles are OpenStreetMap's standard style, loaded live from openstreetmap.org &mdash; they stay light-toned regardless of your device theme, since raster map tiles can't be re-themed. Everything else on this page follows your system's light/dark setting.</p>
+</div>
+
+<script src="vendor/leaflet.js"></script>
+<script src="vendor/leaflet-heat.js"></script>
+<script>
+const PROVIDERS = ["Life Without Barriers", "Scope", "Aruma", "possAbility"];
+function cssVar(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+function providerColorVar(p){ const idx = PROVIDERS.indexOf(p); return ['--p1','--p2','--p3','--p4'][idx] || '--mixed'; }
+function providerColor(p){ return cssVar(providerColorVar(p)); }
+function esc(s){ return String(s).replace(/[&<>]/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
+function bedKey(b){ if(b===null||b===undefined) return null; return b>=6 ? '6+' : String(b); }
+
+const state = { view:'heat', providers:new Set(PROVIDERS), beds:new Set() };
+let ALL = [];
+
+function filteredPoints(){
+  return ALL.filter(p=>{
+    if(!state.providers.has(p.provider)) return false;
+    if(state.beds.size>0){ const k=bedKey(p.bedrooms); if(!k||!state.beds.has(k)) return false; }
+    return true;
+  });
+}
+
+// group nearby points (~ same address / same suburb centroid) for the pins view and heat weighting
+function clusterPoints(pts){
+  const map = new Map();
+  pts.forEach(p=>{
+    const key = p.lat.toFixed(3)+','+p.lon.toFixed(3);
+    if(!map.has(key)) map.set(key, {lat:0,lon:0,n:0,items:[],providers:new Set()});
+    const c = map.get(key);
+    c.lat+=p.lat; c.lon+=p.lon; c.n++; c.items.push(p); c.providers.add(p.provider);
+  });
+  return [...map.values()].map(c=>({lat:c.lat/c.n, lon:c.lon/c.n, n:c.n, items:c.items, providers:c.providers}));
+}
+
+// ---------- map setup ----------
+const map = L.map('map', { preferCanvas:true, zoomControl:true }).setView([-37.15, 144.9], 7);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom: 18,
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors'
+}).addTo(map);
+
+let heatLayer = null;
+let pinsLayer = L.layerGroup();
+
+const SEQ = ['#cde2fb','#9ec5f4','#6da7ec','#3987e5','#256abf','#184f95','#0d366b'];
+function heatGradient(){
+  return {0.0:SEQ[0],0.15:SEQ[1],0.3:SEQ[2],0.48:SEQ[3],0.65:SEQ[4],0.82:SEQ[5],1.0:SEQ[6]};
+}
+
+function buildHeat(clusters){
+  const maxN = Math.max(1, ...clusters.map(c=>c.n));
+  const heatMax = Math.sqrt(maxN);
+  const pts = clusters.map(c=>[c.lat, c.lon, Math.sqrt(c.n)]);
+  if(heatLayer){ map.removeLayer(heatLayer); }
+  heatLayer = L.heatLayer(pts, { radius:26, blur:20, max:heatMax, minOpacity:0.25, gradient: heatGradient() });
+  return { heatMax, maxN };
+}
+
+function buildPins(clusters){
+  pinsLayer.clearLayers();
+  clusters.forEach(c=>{
+    const r = Math.max(6, Math.min(24, 6 + Math.sqrt(c.n)*3.6));
+    const color = c.providers.size===1 ? providerColor([...c.providers][0]) : cssVar('--mixed');
+    const marker = L.circleMarker([c.lat,c.lon], { radius:r, color:'#ffffff', weight:2, fillColor:color, fillOpacity:0.88 });
+    const rows = c.items.slice(0,8).map(p=>`<div class="pl">${esc(p.provider)} &middot; ${p.bedrooms??'?'} bd &middot; <a href="${esc(p.url)}" target="_blank" rel="noopener">listing</a></div>`).join('');
+    const more = c.items.length>8 ? `<div class="pl">+${c.items.length-8} more</div>` : '';
+    marker.bindPopup(`<b>${esc(c.items[0].suburb)}</b>${rows}${more}`);
+    marker.bindTooltip(`${esc(c.items[0].suburb)} &middot; ${c.n} vacanc${c.n===1?'y':'ies'}`);
+    marker.addTo(pinsLayer);
+  });
+}
+
+function updateLegend(heatInfo){
+  const el = document.getElementById('legend');
+  if(state.view==='heat'){
+    const maxN = heatInfo ? heatInfo.maxN : 1;
+    const mid = Math.max(1, Math.round(maxN/2));
+    el.innerHTML = `<div class="bar"></div>
+      <div class="ticks"><span>1</span><span>${mid}</span><span>${maxN}+</span></div>
+      <div class="cap">Vacancies per location (currently shown)</div>`;
+  } else {
+    el.innerHTML = `<div class="cap">Circle size = vacancies at that location &middot; grey = mixed providers</div>`;
+  }
+}
+
+function refreshLayers(){
+  const pts = filteredPoints();
+  const clusters = clusterPoints(pts);
+  const heatInfo = buildHeat(clusters);
+  buildPins(clusters);
+  if(state.view==='heat'){
+    if(map.hasLayer(pinsLayer)) map.removeLayer(pinsLayer);
+    heatLayer.addTo(map);
+  } else {
+    if(heatLayer && map.hasLayer(heatLayer)) map.removeLayer(heatLayer);
+    pinsLayer.addTo(map);
+  }
+  updateLegend(heatInfo);
+}
+
+document.querySelectorAll('#viewSeg button').forEach(btn=>{
+  btn.onclick = ()=>{
+    document.querySelectorAll('#viewSeg button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    state.view = btn.dataset.view;
+    refreshLayers();
+  };
+});
+
+function buildChips(){
+  const wrap = document.getElementById('providerChips');
+  const counts = {};
+  ALL.forEach(p=>counts[p.provider]=(counts[p.provider]||0)+1);
+  wrap.innerHTML = PROVIDERS.map(p=>{
+    const cvar = providerColorVar(p);
+    return `<label class="chip" data-p="${esc(p)}">
+      <input type="checkbox" checked>
+      <span class="swatch" style="background:var(${cvar})"></span>
+      <span class="lbl">${esc(p)}</span>
+      <span class="cnt">${counts[p]||0}</span>
+    </label>`;
+  }).join('');
+  wrap.querySelectorAll('.chip').forEach(chip=>{
+    const p = chip.dataset.p;
+    const input = chip.querySelector('input');
+    chip.addEventListener('click', e=>{
+      e.preventDefault();
+      input.checked = !input.checked;
+      chip.classList.toggle('off', !input.checked);
+      if(input.checked) state.providers.add(p); else state.providers.delete(p);
+      refresh();
+    });
+  });
+}
+
+function buildBedRow(){
+  const wrap = document.getElementById('bedRow');
+  const opts = ['1','2','3','4','5','6+'];
+  wrap.innerHTML = '<button class="bedbtn active" data-b="">Any</button>' +
+    opts.map(o=>`<button class="bedbtn" data-b="${o}">${o}</button>`).join('');
+  wrap.querySelectorAll('.bedbtn').forEach(btn=>{
+    btn.onclick = ()=>{
+      const b = btn.dataset.b;
+      if(b===''){
+        state.beds.clear();
+        wrap.querySelectorAll('.bedbtn').forEach(x=>x.classList.remove('active'));
+        btn.classList.add('active');
+      } else {
+        wrap.querySelector('[data-b=""]').classList.remove('active');
+        if(state.beds.has(b)){ state.beds.delete(b); btn.classList.remove('active'); }
+        else { state.beds.add(b); btn.classList.add('active'); }
+        if(state.beds.size===0) wrap.querySelector('[data-b=""]').classList.add('active');
+      }
+      refresh();
+    };
+  });
+}
+
+document.getElementById('resetFilters').onclick = ()=>{
+  state.providers = new Set(PROVIDERS);
+  state.beds.clear();
+  document.querySelectorAll('.chip').forEach(c=>{c.classList.remove('off'); c.querySelector('input').checked=true;});
+  document.querySelectorAll('.bedbtn').forEach(b=>b.classList.remove('active'));
+  document.querySelector('.bedbtn[data-b=""]').classList.add('active');
+  refresh();
+};
+
+// ---------- table view ----------
+let sortKey='suburb', sortDir=1;
+function renderTable(){
+  const pts = filteredPoints().slice().sort((a,b)=>{
+    let av=a[sortKey], bv=b[sortKey];
+    if(sortKey==='bedrooms'||sortKey==='bathrooms'){ av=av??-1; bv=bv??-1; }
+    else { av=(av||'').toString().toLowerCase(); bv=(bv||'').toString().toLowerCase(); }
+    return av<bv ? -1*sortDir : av>bv ? 1*sortDir : 0;
+  });
+  document.getElementById('tableBody').innerHTML = pts.map(p=>`<tr>
+    <td><span class="dot" style="background:var(${providerColorVar(p.provider)})"></span>${esc(p.provider)}</td>
+    <td><a href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.title)}</a></td>
+    <td>${esc(p.suburb)}</td>
+    <td class="num">${p.bedrooms??'&ndash;'}</td>
+    <td class="num">${p.bathrooms??'&ndash;'}</td>
+    <td>${p.buildingType ? esc(p.buildingType) : '&ndash;'}</td>
+  </tr>`).join('');
+}
+document.querySelectorAll('#dataTable th').forEach(th=>{
+  th.onclick = ()=>{
+    const k = th.dataset.k;
+    sortDir = (sortKey===k) ? -sortDir : 1;
+    sortKey = k;
+    renderTable();
+  };
+});
+document.getElementById('toTable').onclick = ()=>{
+  const mapPanel = document.getElementById('mapPanel');
+  const tablePanel = document.getElementById('tablePanelWrap');
+  const showingTable = !tablePanel.classList.contains('hidden');
+  mapPanel.classList.toggle('hidden', !showingTable);
+  tablePanel.classList.toggle('hidden', showingTable);
+  document.getElementById('toTable').textContent = showingTable ? 'View as table' : 'View as map';
+  if(!showingTable) renderTable();
+  else setTimeout(()=>map.invalidateSize(), 50);
+};
+
+// ---------- stats ----------
+function renderStats(){
+  const pts = filteredPoints();
+  const suburbs = new Set(pts.map(p=>p.suburb)).size;
+  const providers = new Set(pts.map(p=>p.provider)).size;
+  const beds = pts.filter(p=>p.bedrooms!=null);
+  const avgBeds = beds.length ? (beds.reduce((s,p)=>s+p.bedrooms,0)/beds.length).toFixed(1) : '&ndash;';
+  document.getElementById('stats').innerHTML = `
+    <div class="stat"><div class="n">${pts.length}</div><div class="l">Vacancies shown</div></div>
+    <div class="stat"><div class="n">${suburbs}</div><div class="l">Suburbs</div></div>
+    <div class="stat"><div class="n">${providers}</div><div class="l">Providers shown</div></div>
+    <div class="stat"><div class="n">${avgBeds}</div><div class="l">Avg. bedrooms</div></div>
+  `;
+}
+
+function refresh(){
+  renderStats();
+  refreshLayers();
+  if(!document.getElementById('tablePanelWrap').classList.contains('hidden')) renderTable();
+}
+
+fetch('./vic_data.json').then(r=>r.json()).then(data=>{
+  ALL = data;
+  buildChips();
+  buildBedRow();
+  refresh();
+});
+</script>
+</body>
+</html>
