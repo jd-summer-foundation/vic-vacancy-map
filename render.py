@@ -1,4 +1,6 @@
-<!doctype html>
+import json
+
+HTML = """<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -158,7 +160,7 @@ td a{color:var(--accent);}
 <script src="vendor/leaflet.js"></script>
 <script src="vendor/leaflet-heat.js"></script>
 <script>
-const PROVIDERS = ["Life Without Barriers", "Scope", "Aruma", "possAbility", "Melba"];
+const PROVIDERS = __PROVIDER_LIST__;
 function cssVar(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
 function providerColorVar(p){ const idx = PROVIDERS.indexOf(p); return ['--p1','--p2','--p3','--p4','--p5'][idx] || '--mixed'; }
 function providerColor(p){ return cssVar(providerColorVar(p)); }
@@ -388,3 +390,8 @@ fetch('./vic_data.json').then(r=>r.json()).then(data=>{
 </script>
 </body>
 </html>
+"""
+
+html = HTML.replace('__PROVIDER_LIST__', json.dumps(["Life Without Barriers","Scope","Aruma","possAbility","Melba"]))
+open('/home/claude/vic_repo/index.html', 'w').write(html)
+print("written", len(html), "bytes")
